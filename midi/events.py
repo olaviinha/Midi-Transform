@@ -304,7 +304,7 @@ class SetTempoEvent(MetaEvent):
 
     @property
     def bpm(self):
-        return float(6e7) / self._mpqn
+        return float(6e7) / self.mpqn
 
     @bpm.setter
     def bpm(self, value):
@@ -313,13 +313,13 @@ class SetTempoEvent(MetaEvent):
     @property
     def mpqn(self):
         assert(len(self.data) == 3)
-        vals = [self.data[x] << (0o16 - (8 * x)) for x in range(3)]
+        # vals = [self.data[x] << (0o16 - (8 * x)) for x in range(3)]
+        vals = [self.data[x] << (0o20 - (8 * x)) for x in range(3)]
         return sum(vals)
 
     @mpqn.setter
     def mpqn(self, value):
         self.data = [(value >> (0o16 - (8 * x)) & 0xFF) for x in range(3)]
-
 
 class SmpteOffsetEvent(MetaEvent):
     name = 'SMPTE Offset'
