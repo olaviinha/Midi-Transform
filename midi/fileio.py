@@ -16,11 +16,6 @@ class FileReader(object):
         magic = midifile.read(4)
         if magic != b'MThd':
             raise TypeError("Bad header in MIDI file: {}".format(magic))
-        # next four bytes are header size
-        # next two bytes specify the format version
-        # next two bytes specify the number of tracks
-        # next two bytes specify the resolution/PPQ/Parts Per Quarter
-        # (in other words, how many ticks per quater note)
         data = unpack(">LHHH", midifile.read(10))
         hdrsz = data[0]
         format = data[1]
@@ -107,10 +102,10 @@ class FileWriter(object):
                             pattern.format, 
                             len(pattern),
                             pattern.resolution)
-        midifile.write('MThd%s' % packdata)
+        midifile.write(b'MThd' + packdata)
             
     def write_track(self, midifile, track):
-        buf = ''
+        buf = b''
         self.RunningStatus = None
         for event in track:
             buf += self.encode_midi_event(event)
@@ -118,31 +113,36 @@ class FileWriter(object):
         midifile.write(buf)
 
     def encode_track_header(self, trklen):
-        return 'MTrk%s' % pack(">L", trklen)
+        return b'MTrk' + pack(">L", trklen)
 
     def encode_midi_event(self, event):
-        ret = ''
-        ret += write_varlen(event.tick)
+        ret = b''  # Starting with an empty bytes object
+        ret += write_varlen(event.tick)  # write_varlen now directly outputs bytes
+
         # is the event a MetaEvent?
         if isinstance(event, MetaEvent):
-            ret += chr(event.statusmsg) + chr(event.metacommand)
-            ret += write_varlen(len(event.data))
-            ret += str.join('', map(chr, event.data))
+            ret += bytes([event.statusmsg]) + bytes([event.metacommand])
+            ret += write_varlen(len(event.data))  # write_varlen now directly outputs bytes
+            ret += bytes(event.data)
+
         # is this event a Sysex Event?
         elif isinstance(event, SysexEvent):
-            ret += chr(0xF0)
-            ret += str.join('', map(chr, event.data))
-            ret += chr(0xF7)
+            ret += b'\xF0'  # Sysex start
+            ret += bytes(event.data)
+            ret += b'\xF7'  # Sysex end
+
         # not a Meta MIDI event or a Sysex event, must be a general message
         elif isinstance(event, Event):
             if not self.RunningStatus or \
-                self.RunningStatus.statusmsg != event.statusmsg or \
-                self.RunningStatus.channel != event.channel:
+              self.RunningStatus.statusmsg != event.statusmsg or \
+              self.RunningStatus.channel != event.channel:
                     self.RunningStatus = event
-                    ret += chr(event.statusmsg | event.channel)
-            ret += str.join('', map(chr, event.data))
+                    ret += bytes([event.statusmsg | event.channel])
+            ret += bytes(event.data)
+
         else:
             raise ValueError("Unknown MIDI Event: " + str(event))
+
         return ret
 
 def write_midifile(midifile, pattern):
@@ -156,4 +156,3 @@ def read_midifile(midifile):
         midifile = open(midifile, 'rb')
     reader = FileReader()
     return reader.read(midifile)
-
