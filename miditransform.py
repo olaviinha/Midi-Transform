@@ -1,16 +1,6 @@
 #!/usr/bin/env python
 #Encoding: utf-8
 
-#========================================================================================
-# title           : miditransform.py
-# description     : Transform midi file.
-# author          : CMRM.
-# usage           : python miditransform.py [input file] [output file]
-# python_version  : 2.7
-# license         : Public domain.
-#========================================================================================
-
-
 import midi
 import sys
 import copy
@@ -77,7 +67,7 @@ class MidiFile:
                     if open_file:
                         # Calculate elapsed time.
                         time += 60*t / (bpm * resolution)
-                        bpm = event.get_bpm()
+                        bpm = event.bpm
                     self.events["tempo"].append(evt_data)
                 elif isinstance(evt_type, midi.ControlChangeEvent):
                     self.events["control_change"].append(evt_data)
